@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Climate Analytics Dashboard - Async API</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 antialiased">
+
+    <!-- Sticky Navigation Bar -->
+    <nav class="sticky top-0 z-50 w-full bg-slate-50/80 backdrop-blur-md border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-8">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                        </svg>
+                    </div>
+                    <span class="text-xl font-bold tracking-tight text-slate-900">Climate Analytics</span>
+                </div>
+                <div class="hidden md:flex items-center gap-6">
+                    <a href="#" class="text-sm font-semibold text-indigo-600">Dashboard</a>
+                    <a href="#" class="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors">Reports</a>
+                    <div class="relative group">
+                        <button class="flex items-center gap-1 text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors">
+                            More
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button class="p-2 text-slate-400 hover:text-slate-600"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></button>
+                <div class="w-8 h-8 rounded-full bg-slate-200"></div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        <header class="flex flex-col lg:flex-row lg:items-end justify-between mb-10 gap-6">
+            <div>
+                <h1 class="text-4xl font-black tracking-tight text-slate-900">Weather Statistics</h1>
+                <div class="flex items-center gap-3 mt-2">
+                    <p class="text-slate-500 font-medium">Regional climate intelligence and comparative analytics.</p>
+                    <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                    <p id="loadingStatus" class="text-indigo-600 text-sm font-bold opacity-0 transition-opacity flex items-center gap-2">
+                        <svg class="animate-spin h-4 w-4 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Syncing...
+                    </p>
+                </div>
+            </div>
+
+            <div class="glass-card p-2 rounded-2xl shadow-sm flex flex-wrap items-center gap-2">
+                <div class="flex items-center gap-2 px-3 border-r border-slate-200">
+                    <span class="text-[10px] font-black uppercase text-slate-400">Start</span>
+                    <input type="date" id="startDate" onchange="handleRefresh(true)" class="bg-transparent text-sm font-bold focus:outline-none cursor-pointer">
+                </div>
+                <div class="flex items-center gap-2 px-3 border-r border-slate-200">
+                    <span class="text-[10px] font-black uppercase text-slate-400">Period</span>
+                    <select id="rangeFilter" onchange="handleRefresh(true)" class="bg-transparent text-sm font-bold focus:outline-none cursor-pointer">
+                        <option value="7">7 Days</option>
+                        <option value="3">3 Days</option>
+                        <option value="14">14 Days</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 px-3">
+                    <span class="text-[10px] font-black uppercase text-slate-400">Unit</span>
+                    <select id="unitFilter" onchange="handleRefresh()" class="bg-transparent text-sm font-bold focus:outline-none cursor-pointer">
+                        <option value="C">Celsius (°C)</option>
+                        <option value="F">Fahrenheit (°F)</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <!-- Highlights Section: Today's Snapshot -->
+        <div class="mb-8 grid grid-cols-1 xl:grid-cols-2 gap-8">
+            <div class="glass-card p-6 rounded-3xl shadow-xl shadow-slate-200/50">
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                    <span class="text-orange-500">🔥</span> Top 5 Hottest (Today)
+                </h3>
+                <div id="hottestList" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-center"></div>
+            </div>
+
+            <div class="glass-card p-6 rounded-3xl shadow-xl shadow-slate-200/50">
+                <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                    <span class="text-blue-500">❄️</span> Top 5 Coolest (Today)
+                </h3>
+                <div id="coolestList" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-center"></div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Nong Khai -->
+            <div class="glass-card p-6 rounded-3xl shadow-xl shadow-slate-200/50">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-bold">Local Forecast A</h3>
+                    <select id="nkSelect" onchange="handleRefresh()" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold focus:outline-none cursor-pointer">
+                    </select>
+                </div>
+                <div class="relative h-72">
+                    <canvas id="nongKhaiChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Korat -->
+            <div class="glass-card p-6 rounded-3xl shadow-xl shadow-slate-200/50">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-bold">Local Forecast B</h3>
+                    <select id="koratSelect" onchange="handleRefresh()" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold focus:outline-none cursor-pointer">
+                    </select>
+                </div>
+                <div class="relative h-72">
+                    <canvas id="koratChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comparison Chart (Full Width) -->
+        <div class="mt-8 glass-card p-6 rounded-3xl shadow-xl shadow-slate-200/50">
+            <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                <h3 class="text-lg font-bold">Province Comparison</h3>
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold uppercase text-slate-400">Metric</span>
+                        <select id="metricFilter" onchange="handleRefresh()" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold focus:outline-none cursor-pointer">
+                            <option value="temp">Temperature</option>
+                            <option value="humidity">Humidity</option>
+                            <option value="wind">Wind Speed</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold uppercase text-slate-400">Province A</span>
+                        <select id="comp1Select" onchange="handleRefresh()" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold focus:outline-none cursor-pointer">
+                            <!-- Options populated via JS -->
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold uppercase text-slate-400">Province B</span>
+                        <select id="comp2Select" onchange="handleRefresh()" class="bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-sm font-semibold focus:outline-none cursor-pointer">
+                            <!-- Options populated via JS -->
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="relative h-96">
+                <canvas id="comparisonChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PROVINCES = {
+            "Nong Khai": { lat: 17.88, lon: 102.75 },
+            "Nakhon Ratchasima": { lat: 14.97, lon: 102.10 },
+            "Bangkok": { lat: 13.75, lon: 100.50 },
+            "Chiang Mai": { lat: 18.79, lon: 98.99 },
+            "Phuket": { lat: 7.89, lon: 98.40 },
+            "Khon Kaen": { lat: 16.43, lon: 102.82 },
+            "Chon Buri": { lat: 13.36, lon: 100.98 }
+        };
+
+        // Register the DataLabels plugin
+        Chart.register(ChartDataLabels);
+
+        let charts = {};
+        let cachedData = null;
+
+        // Configuration for reusable charts
+        const baseOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { 
+                legend: { display: true, position: 'bottom', labels: { boxWidth: 12, usePointStyle: true } },
+                datalabels: {
+                    display: true,
+                    align: 'top',
+                    anchor: 'end',
+                    offset: 4,
+                    font: { size: 10, weight: '600' },
+                    color: (context) => context.dataset.borderColor,
+                    formatter: (value, context) => {
+                        const label = context.dataset.label || '';
+                        if (label.includes('Temp')) return value + '°';
+                        if (label.includes('Humidity')) return value + '%';
+                        return value; // Wind
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: (context) => {
+                            const label = context.dataset.label || '';
+                            let unit = ' km/h';
+                            if (label.includes('Temp')) unit = '°';
+                            else if (label.includes('Humidity')) unit = '%';
+                            return `${label}: ${context.parsed.y}${unit}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: { grid: { borderDash: [5, 5], color: '#e2e8f0' } },
+                x: { grid: { display: false } }
+            }
+        };
+
+        // 1. ASYNC FETCH: Get data from mock API
+        async function fetchWeatherData(nkName, koratName, p1Name, p2Name, startStr, endStr) {
+            const status = document.getElementById('loadingStatus');
+            try {
+                const names = Object.keys(PROVINCES);
+                const lats = names.map(n => PROVINCES[n].lat).join(',');
+                const lons = names.map(n => PROVINCES[n].lon).join(',');
+
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&daily=temperature_2m_max,relative_humidity_2m_max,wind_speed_10m_max&timezone=auto&start_date=${startStr}&end_date=${endStr}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) throw new Error('Network response was not ok');
+                let data = await response.json();
+
+                // Normalize data: ensure it is an array even if one location is returned
+                if (!Array.isArray(data)) data = [data];
+                if (!data[0] || !data[0].daily) throw new Error('Invalid API response structure');
+
+                // Map all provinces to a lookup object
+                const weatherData = {};
+                names.forEach((name, i) => {
+                    const entry = data[i] || data[0]; // Fallback to first if index missing
+                    weatherData[name] = {
+                        temp: entry.daily.temperature_2m_max || [],
+                        humidity: entry.daily.relative_humidity_2m_max || [],
+                        wind: entry.daily.wind_speed_10m_max || []
+                    };
+                });
+
+                return {
+                    labels: data[0].daily.time.map(t => new Date(t).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })),
+                    nk: { name: nkName, ...weatherData[nkName] },
+                    korat: { name: koratName, ...weatherData[koratName] },
+                    comp1: { name: p1Name, ...weatherData[p1Name] },
+                    comp2: { name: p2Name, ...weatherData[p2Name] },
+                    all: weatherData
+                };
+            } catch (error) {
+                console.error('Fetch error:', error);
+                alert('Failed to load real-time weather data. Please check your internet connection.');
+                status.classList.add('opacity-0');
+                return null;
+            }
+        }
+
+        // 2. Initialize charts with empty data
+        function initCharts() {
+            const nkCtx = document.getElementById('nongKhaiChart').getContext('2d');
+            const koratCtx = document.getElementById('koratChart').getContext('2d');
+            const compCtx = document.getElementById('comparisonChart').getContext('2d');
+
+            charts.nongKhai = new Chart(nkCtx, {
+                type: 'line',
+                data: { labels: [], datasets: [
+                    { label: 'Temp', borderColor: '#3b82f6', tension: 0.4, fill: false },
+                    { label: 'Humidity (%)', borderColor: '#06b6d4', tension: 0.4, fill: false, borderDash: [5, 5] },
+                    { label: 'Wind (km/h)', borderColor: '#8b5cf6', tension: 0.4, fill: false, borderDash: [2, 2] }
+                ]},
+                options: baseOptions
+            });
+
+            charts.korat = new Chart(koratCtx, {
+                type: 'line',
+                data: { labels: [], datasets: [
+                    { label: 'Temp', borderColor: '#f97316', tension: 0.4, fill: false },
+                    { label: 'Humidity (%)', borderColor: '#10b981', tension: 0.4, fill: false, borderDash: [5, 5] },
+                    { label: 'Wind (km/h)', borderColor: '#ec4899', tension: 0.4, fill: false, borderDash: [2, 2] }
+                ]},
+                options: baseOptions
+            });
+
+            charts.comparison = new Chart(compCtx, {
+                type: 'line',
+                data: { labels: [], datasets: [
+                    { label: '', borderColor: '#6366f1', tension: 0.4, fill: false },
+                    { label: '', borderColor: '#ec4899', tension: 0.4, fill: false }
+                ]},
+                options: baseOptions
+            });
+
+            // Populate dynamic dropdowns
+            const selects = ['nkSelect', 'koratSelect', 'comp1Select', 'comp2Select'].map(id => document.getElementById(id));
+            Object.keys(PROVINCES).forEach(name => {
+                selects.forEach(s => s.add(new Option(name, name)));
+            });
+            
+            document.getElementById('nkSelect').value = "Nong Khai";
+            document.getElementById('koratSelect').value = "Nakhon Ratchasima";
+            document.getElementById('comp1Select').value = "Nong Khai";
+            document.getElementById('comp2Select').value = "Nakhon Ratchasima";
+        }
+
+        // 3. Update charts logic
+        async function handleRefresh(forceFetch = false) {
+            const status = document.getElementById('loadingStatus');
+            if (forceFetch === true) cachedData = null;
+
+            // Fetch if not cached or force refresh
+            if (!cachedData) {
+                status.classList.remove('opacity-0');
+                const startDateStr = document.getElementById('startDate').value;
+                const range = parseInt(document.getElementById('rangeFilter').value);
+                const nk = document.getElementById('nkSelect').value;
+                const korat = document.getElementById('koratSelect').value;
+                const p1 = document.getElementById('comp1Select').value;
+                const p2 = document.getElementById('comp2Select').value;
+
+                // Calculate end date based on range selection
+                const start = new Date(startDateStr);
+                const end = new Date(start);
+                end.setDate(start.getDate() + (range - 1));
+                const endDateStr = end.toISOString().split('T')[0];
+
+                cachedData = await fetchWeatherData(nk, korat, p1, p2, startDateStr, endDateStr);
+                status.classList.add('opacity-0');
+            }
+
+            if (cachedData) {
+                // Update the active data pointers based on current dropdown selections
+                // This allows switching provinces instantly using the cached data for all provinces
+                const nk = document.getElementById('nkSelect').value;
+                const korat = document.getElementById('koratSelect').value;
+                const p1 = document.getElementById('comp1Select').value;
+                const p2 = document.getElementById('comp2Select').value;
+
+                cachedData.nk = { name: nk, ...cachedData.all[nk] };
+                cachedData.korat = { name: korat, ...cachedData.all[korat] };
+                cachedData.comp1 = { name: p1, ...cachedData.all[p1] };
+                cachedData.comp2 = { name: p2, ...cachedData.all[p2] };
+
+                const range = parseInt(document.getElementById('rangeFilter').value);
+                const unit = document.getElementById('unitFilter').value;
+
+                if (charts.nongKhai) updateChartInstance(charts.nongKhai, cachedData.nk, cachedData.labels, range, unit);
+                if (charts.korat) updateChartInstance(charts.korat, cachedData.korat, cachedData.labels, range, unit);
+                updateComparisonChart(charts.comparison, cachedData, range, unit);
+                updateHighlights(cachedData, unit);
+            }
+        }
+
+        function updateHighlights(allData, unit) {
+            const hotList = document.getElementById('hottestList');
+            const coolList = document.getElementById('coolestList');
+            
+            // Create snapshot for the first day (index 0) across all provinces
+            const records = Object.keys(allData.all).map(name => ({
+                name: name,
+                temp: allData.all[name].temp ? allData.all[name].temp[0] : null
+            })).filter(r => r.temp !== null && !isNaN(r.temp));
+
+            const render = (items, colorClass) => items.map(r => {
+                const displayTemp = unit === 'F' ? (r.temp * 9/5) + 32 : r.temp;
+                const formattedTemp = typeof displayTemp === 'number' ? displayTemp.toFixed(1) : '--';
+                return `
+                    <div class="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                        <div class="text-[10px] font-bold text-slate-400 uppercase leading-tight truncate">${r.name}</div>
+                        <div class="text-lg font-black ${colorClass}">${formattedTemp}°</div>
+                    </div>
+                `;
+            }).join('');
+
+            hotList.innerHTML = render([...records].sort((a, b) => b.temp - a.temp).slice(0, 5), 'text-orange-500');
+            coolList.innerHTML = render([...records].sort((a, b) => a.temp - b.temp).slice(0, 5), 'text-blue-500');
+        }
+
+        function updateChartInstance(chart, cityData, labels, range, unit) {
+            let slicedLabels = labels.slice(-range);
+            let slicedTemp = cityData.temp.slice(-range);
+            let slicedHumidity = cityData.humidity.slice(-range);
+            let slicedWind = cityData.wind.slice(-range);
+
+            // Only convert Temperature unit
+            if (unit === 'F') {
+                slicedTemp = slicedTemp.map(c => (c * 9/5) + 32);
+            }
+
+            chart.data.labels = slicedLabels;
+            chart.data.datasets[0].data = slicedTemp;
+            chart.data.datasets[1].data = slicedHumidity;
+            chart.data.datasets[2].data = slicedWind;
+            chart.data.datasets[0].label = `${cityData.name} Temp (°${unit})`;
+            chart.update();
+        }
+
+        function updateComparisonChart(chart, allData, range, unit) {
+            const metric = document.getElementById('metricFilter').value;
+            let slicedLabels = allData.labels.slice(-range);
+            let p1Data = allData.comp1[metric].slice(-range);
+            let p2Data = allData.comp2[metric].slice(-range);
+
+            let unitLabel = '';
+            const metricName = metric === 'temp' ? 'Temp' : metric === 'humidity' ? 'Humidity' : 'Wind';
+
+            if (metric === 'temp') {
+                if (unit === 'F') {
+                    p1Data = p1Data.map(c => (c * 9/5) + 32);
+                    p2Data = p2Data.map(c => (c * 9/5) + 32);
+                }
+                unitLabel = `(°${unit})`;
+            } else if (metric === 'humidity') {
+                unitLabel = '(%)';
+            } else {
+                unitLabel = '(km/h)';
+            }
+
+            chart.data.labels = slicedLabels;
+            chart.data.datasets[0].data = p1Data;
+            chart.data.datasets[1].data = p2Data;
+            chart.data.datasets[0].label = `${allData.comp1.name} ${metricName} ${unitLabel}`;
+            chart.data.datasets[1].label = `${allData.comp2.name} ${metricName} ${unitLabel}`;
+            chart.update();
+        }
+
+        // Startup
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('startDate').value = today;
+            document.getElementById('startDate').setAttribute('max', today);
+
+            initCharts();
+            await handleRefresh();
+        });
+    </script>
+</body>
+</html>
