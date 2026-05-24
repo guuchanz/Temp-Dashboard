@@ -1,4 +1,5 @@
 # Climate Analytics Dashboard
+<img width="1327" height="914" alt="Screenshot from 2026-05-24 22-31-24" src="https://github.com/user-attachments/assets/d0d67bd6-4e11-43f3-9bf2-a0df36a52ca9" />
 
 A high-performance, responsive weather visualization dashboard that fetches real-time meteorological data from the Open-Meteo API. This project provides detailed analytics for various Thai provinces, featuring interactive charts and comparative tools.
 
