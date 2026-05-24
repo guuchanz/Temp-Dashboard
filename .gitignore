@@ -1,6 +1,10 @@
+
 # OS metadata
 .DS_Store
 Thumbs.db
 
 # Local IDE settings
 .vscode/
+
+# Documentation
+skill.md
